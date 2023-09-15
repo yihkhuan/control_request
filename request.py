@@ -1,39 +1,39 @@
-from typing import Dict
+from typing import Dict, List
 import requests
 from time import sleep
 import json
 
 
 class client():
-    def __init__(self, IP, schema, timeout = 5) -> None:
+    def __init__(self, IP, schema, timeout = 5):
         self.IP = IP
         self.timeout = timeout
         f = open(schema)
-        JSON = json.load(f)
-        self.funct = {}
-        for x in JSON:
+        dictionaries = json.load(f)
+        for x in dictionaries:
             name = x.get('name')
             method = x.get('type')
             endpt = x.get('endpoint')
             parameters = x.get('parameters')
 
-            self.funct[name] = [method,endpt,parameters]
+            self.load(name, method, endpt, parameters)
+
+        f.close()
         pass
 
-    def load(self, name):
-        # fn = lambda **kwargs: print(kwargs)
-        for x in self.funct:
-            if name == x:
-                method: str = self.funct[x][0]
-                endpt: str = self.funct[x][1]
-                parameters: list = self.funct[x][2]
-                if method == "get":
-                    fn = lambda **kwargs: self.get(endpt, kwargs, parameters)
-                
-                elif method == "post":
-                    fn = lambda **kwargs: self.post(endpt, kwargs, parameters)
+    callback = {}
+    def load(self,name,method,endpt,parameters):
+        
+        if method == "get":
+            fn = lambda **kwargs: self.get(endpt, kwargs, parameters)
 
-        return fn
+        elif method == "post":
+            fn = lambda **kwargs: self.post(endpt, kwargs, parameters)
+
+        self.callback[name] = fn
+
+        pass
+        
 
     def get(self, endpoint, kwargs, parameters=None):
         req = "http://" + self.IP + endpoint
@@ -60,16 +60,16 @@ class client():
             for param in parameters:
                 params[param] = kwargs[param]
 
-        res = requests.post(req,
-                           timeout=self.timeout,
-                           params=params)
+        requests.post(req,
+                    timeout=self.timeout,
+                    params=params)
 
         return None
     
 
     def __call__(self, fn: str, **kwargs):
-        return self.load(fn)(**kwargs)
+        return self.callback[fn](**kwargs)
 
 exp = client("0.0.0.0",'requests.json')
-print(exp("set_dac_sampling_rate", rate = 0))
+print(exp("set_dac_delay", channel = 0))
 
